@@ -22,7 +22,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-01-01' = {
   }
   properties: {
     dnsPrefix: '${workloadName}-aks'
-    kubernetesVersion: '1.30'
+    kubernetesVersion: '1.34'
 
     // Workload Identity support
     oidcIssuerProfile: {
