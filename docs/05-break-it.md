@@ -71,7 +71,33 @@ The `deploy-infra.yml` workflow will trigger automatically (it watches for chang
 2. **Select the workflow run** for "Deploy Infra" that just started
 3. **Watch it complete** (~3–5 minutes)
 
-The deployment will **succeed**. The Bicep template is valid syntactically. Azure will happily remove the role assignment you told it to remove. No errors. No warnings. Just a silent infrastructure change.
+The deployment will **succeed**. The Bicep template is valid syntactically. No errors. No warnings. Just a silent infrastructure change.
+
+> **⚠️ Important:** Azure Resource Manager uses **incremental deployment mode** by default, which means removing a resource from the Bicep template does **not** automatically delete it in Azure — it only stops managing it. The Bicep deployment alone won't break the app. To actually trigger the fault, you need to manually delete the role assignment after the deployment completes:
+
+```bash
+# Get the role assignment name (the GUID)
+ASSIGNMENT_NAME=$(az cosmosdb sql role assignment list \
+  --account-name srelab-cosmos \
+  --resource-group rg-srelab \
+  --query "[0].name" -o tsv)
+
+# Delete it
+az cosmosdb sql role assignment delete \
+  --account-name srelab-cosmos \
+  --resource-group rg-srelab \
+  --role-assignment-id "$ASSIGNMENT_NAME" \
+  --yes
+```
+
+> **Why two steps?** This mirrors what happens in production with Bicep `complete` mode or when a team actively cleans up stale role assignments. The Bicep change removes it from the "desired state" (your code), and the CLI deletion simulates Azure catching up. When the SRE Agent investigates, it'll find the role assignment is missing from both the Bicep code *and* the live Azure environment — exactly like a real cleanup-gone-wrong scenario.
+
+After deleting the role assignment, **restart the pods** to clear any cached credentials:
+
+```bash
+kubectl rollout restart deployment/web-app -n workshop
+kubectl rollout status deployment/web-app -n workshop --timeout=60s
+```
 
 ## Watch It Break
 
@@ -97,28 +123,24 @@ curl http://$APP_IP/items
 # }
 ```
 
-**The app is broken.** Health checks are passing. Pods are running. But users can't get their data.
+**The app is broken.** Health checks are passing. Pods are running. But users can't get their data. The pods restarted with fresh credentials that have no CosmosDB role assignment — every request to CosmosDB is rejected with a 403.
 
 ## What's Happening Under the Hood
 
 Here's the sequence of events:
 
 ```
-1. Bicep deployment removes cosmosRoleAssignment resource
+1. Bicep deployment removes cosmosRoleAssignment from managed state
    ↓
-2. Azure deletes the role assignment from CosmosDB
+2. CLI command deletes the actual role assignment from Azure
    ↓
-3. Pod still has:
-   - OIDC token from Kubernetes
-   - Federated credential linking K8s ServiceAccount to UAMI
-   - UAMI exists in Azure AD
-   - But no RBAC role assignment on CosmosDB
+3. Pod restart clears cached UAMI tokens
    ↓
-4. App makes request to CosmosDB:
+4. App makes request to CosmosDB with fresh credentials:
    K8s OIDC token → UAMI token → CosmosDB
    ↓
 5. CosmosDB receives the UAMI token but checks RBAC:
-   "Hmm, this identity is valid, but I don't have a role assignment for it"
+   "This identity is valid, but I don't have a role assignment for it"
    ↓
 6. CosmosDB rejects the request: 403 Forbidden
    ↓
