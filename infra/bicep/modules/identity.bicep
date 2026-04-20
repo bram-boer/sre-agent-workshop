@@ -56,15 +56,6 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-02-15-preview
 }
 
 // WORKSHOP: This role assignment is critical — removing it will cause the app to fail (used in Module 5: Break It)
-resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-02-15-preview' = {
-  parent: cosmosAccount
-  name: guid(cosmosAccount.id, uami.id, '00000000-0000-0000-0000-000000000002')
-  properties: {
-    roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
-    principalId: uami.properties.principalId
-    scope: cosmosAccount.id
-  }
-}
 
 // ── Outputs ──────────────────────────────────
 @description('User-Assigned Managed Identity client ID')
