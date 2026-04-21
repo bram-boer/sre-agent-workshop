@@ -20,18 +20,38 @@ The SRE Agent can respond to incidents from multiple sources (Azure Monitor, Pag
 
 ### What Just Happened
 
-The agent has now established a connection to your Azure Monitor. When alerts fire in Azure Monitor, they'll flow into the SRE Agent via an **alert processing rule**. The agent will see each alert in real time and decide whether to investigate based on the incident response plan you're about to create.
+The agent has now established a connection to your Azure Monitor. The SRE Agent **does not use alert processing rules or webhooks**. Instead, it actively **polls Azure Monitor every minute** using its managed identity to detect new fired alerts. When it finds one, it:
 
-### Verify the Alert Processing Rule
+1. **Acknowledges** the alert (to prevent duplicate investigations)
+2. **Creates** an investigation thread with the full alert context
+3. **Merges** recurring alerts from the same alert rule into a single thread
 
-After connecting, verify that the SRE Agent created an alert processing rule that covers your resource group:
+This zero-credential polling model means there's nothing extra to configure — no action groups, no webhooks, no alert processing rules.
 
-1. In the Azure portal, go to **Monitor** → **Alerts** → **Alert processing rules**
-2. You should see a rule created by the SRE Agent (it may be named after your agent or contain "sre" in the name)
-3. Check that its **scope** includes your subscription or specifically `rg-srelab`
-4. Check that it's **enabled**
+### Verify the Connection
 
-> **⚠️ If no alert processing rule exists:** Go back to the SRE Agent portal → **Builder** → **Incident platform** and reconnect Azure Monitor. The agent needs this rule to receive alert notifications. Without it, alerts fire in Azure Monitor but the SRE Agent never sees them.
+After connecting, verify that the SRE Agent can see your resources:
+
+1. In the SRE Agent portal, go to the **Setup** page (click "Complete setup" in the status bar)
+2. Confirm that **Incidents** shows "Azure Monitor" as connected
+3. Confirm that **Azure resources** includes your subscription or `rg-srelab` resource group
+4. If Azure resources is not connected, click **Connect** and add your subscription — this allows the agent to query metrics, resource health, and run Azure CLI commands during investigations
+
+> **⚠️ If alerts aren't being detected:** The most common cause is that the agent's managed identity lacks permissions. Verify it has:
+> - **Reader** role on the monitored resource group or subscription
+> - **Monitoring Contributor** role (for alert acknowledgment)
+>
+> Check with:
+> ```bash
+> # Find the agent's managed identity name
+> AGENT_UAMI=$(az resource list --resource-group rg-srelab \
+>   --resource-type "Microsoft.ManagedIdentity/userAssignedIdentities" \
+>   --query "[?contains(name, 'agent')].name" -o tsv)
+>
+> # List its role assignments
+> PRINCIPAL_ID=$(az identity show --name "$AGENT_UAMI" --resource-group rg-srelab --query principalId -o tsv)
+> az role assignment list --assignee "$PRINCIPAL_ID" --all --query "[].{role:roleDefinitionName, scope:scope}" -o table
+> ```
 
 ## Create an Incident Response Plan
 
@@ -103,15 +123,15 @@ If the list is empty, re-run the **Deploy Infrastructure** workflow from Module 
 Here's the flow when something goes wrong:
 
 ```
-1. Azure Monitor Alert fires
+1. Azure Monitor Alert fires (scheduled query rule triggers)
    ↓
-2. Alert flows to SRE Agent (via incident platform connection)
+2. SRE Agent polls Azure Monitor every ~1 minute
    ↓
-3. Agent acknowledges alert and starts investigating
+3. Agent detects fired alert, acknowledges it, creates investigation thread
    ↓
-4. Agent queries Azure Monitor logs & metrics
+4. Agent queries Azure Monitor logs & metrics (via managed identity)
    ↓
-5. Agent checks deployment history & code changes
+5. Agent checks deployment history & code changes (via GitHub connection)
    ↓
 6. Agent correlates log errors with recent commits
    ↓
