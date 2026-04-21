@@ -132,7 +132,7 @@ resource http500Alert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview
     evaluationFrequency: 'PT1M'
     windowSize: 'PT5M'
     scopes: [
-      monitoring.outputs.logAnalyticsId
+      aks.outputs.clusterId
     ]
     criteria: {
       allOf: [
