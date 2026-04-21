@@ -21,7 +21,7 @@ This is exactly how production apps authenticate to Azure services in AKS — no
 ## Deploy via GitHub Actions
 
 1. **Go to your fork** on GitHub → **Actions** tab
-2. **Select the workflow:** `Deploy App`
+2. **Select the workflow:** `Deploy Application`
 3. **Click "Run workflow"** (dropdown in the upper right)
 4. Fill in the workflow inputs:
    - **workloadName** (default: `srelab`) — **must match what you used in Module 1**. If you deployed infrastructure with a different name, use the same name here.

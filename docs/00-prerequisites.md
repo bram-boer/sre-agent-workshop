@@ -10,7 +10,7 @@ The workshop creates several Azure resources that you'll pay for by the hour. He
 
 | Resource | Hourly Cost |
 |----------|------------|
-| AKS (2× Standard_DS2_v2 nodes) | ~$0.25 |
+| AKS (2× Standard_D2ads_v6 nodes) | ~$0.25 |
 | CosmosDB (serverless, minimal RU) | ~$0.05 |
 | Log Analytics + Application Insights | ~$0.10 |
 | SRE Agent | ~$0.50 |

@@ -85,7 +85,7 @@ The workflow performs these steps:
 Resource Group:      rg-srelab
 Location:            eastus2
 AKS Cluster:         srelab-aks
-CosmosDB Endpoint:   https://srelab-cosmos.mongo.cosmos.azure.com:10255
+CosmosDB Endpoint:   https://srelab-cosmos.documents.azure.com:443/
 UAMI Client ID:     xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Log Analytics ID:    /subscriptions/.../resourceGroups/rg-srelab/providers/...
 ============================================
@@ -223,7 +223,7 @@ Replace `srelab` with your `workloadName` if you customized it:
 az resource list --resource-group rg-srelab -o table
 ```
 
-Expected output: ~8 resources including AKS cluster, CosmosDB, Log Analytics, Application Insights, managed identity, etc.
+Expected output: ~8–10 resources including AKS cluster, CosmosDB, Log Analytics, Application Insights, managed identity, alert rules, etc. (Azure may auto-create additional resources like Smart Detection rules.)
 
 ### 3. Verify AKS Cluster
 
@@ -264,9 +264,9 @@ kubectl get nodes
 
 Expected output:
 ```
-NAME                       STATUS   ROLES   AGE    VERSION
-aks-system-########-0      Ready    agent   10m    v1.30.x
-aks-system-########-1      Ready    agent   10m    v1.30.x
+NAME                             STATUS   ROLES    AGE    VERSION
+aks-system-########-vmss000000   Ready    <none>   10m    v1.34.x
+aks-system-########-vmss000001   Ready    <none>   10m    v1.34.x
 ```
 
 Both nodes should be in `Ready` state. If nodes show `NotReady` or `NotSchedulable`, wait a moment and try again — node initialization can take a few minutes.
@@ -405,7 +405,7 @@ These regions are tested and supported by the workshop. Retry the workflow with 
 
 **Cause:** Your subscription has hit a resource quota (e.g., vCPU limit, compute quota).
 
-**Context:** The AKS cluster requires 4 vCPUs (2 nodes × 2 vCPU each for Standard_DS2_v2 VMs).
+**Context:** The AKS cluster requires 4 vCPUs (2 nodes × 2 vCPU each for Standard_D2ads_v6 VMs).
 
 **Solution:**
 1. Check your current vCPU usage: Go to Azure portal → **Subscriptions** → **Usage + quotas**
@@ -472,7 +472,7 @@ Run this quick verification:
 ```bash
 # List resources
 az resource list --resource-group rg-srelab --query "[].type" -o table | wc -l
-# Should show: ~8
+# Should show: ~10
 
 # Check nodes
 kubectl get nodes
