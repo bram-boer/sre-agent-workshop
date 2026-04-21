@@ -126,7 +126,7 @@ resource http500Alert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview
   tags: tags
   properties: {
     displayName: 'HTTP 500 Errors Detected'
-    description: 'Fires when the workshop app logs more than 5 error responses in 5 minutes — typically caused by CosmosDB connectivity or RBAC failures.'
+    description: 'Fires when the workshop app logs error responses in container logs — typically caused by CosmosDB connectivity or RBAC failures.'
     severity: 3
     enabled: true
     evaluationFrequency: 'PT1M'
@@ -149,7 +149,7 @@ resource http500Alert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview
           '''
           timeAggregation: 'Count'
           operator: 'GreaterThan'
-          threshold: 5
+          threshold: 0
           failingPeriods: {
             numberOfEvaluationPeriods: 1
             minFailingPeriodsToAlert: 1
